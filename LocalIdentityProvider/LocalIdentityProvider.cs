@@ -36,14 +36,21 @@ namespace Limitless.LocalIdentityProvider
         /// The logger.
         /// </summary>
         private ILogger _log;
+        /// <summary>
+        /// The database provider.
+        /// </summary>
+        private IDatabaseProvider _db;
 
         /// <summary>
         /// Standard constructor with log.
         /// </summary>
         /// <param name="log">The logger to use</param>
-        public LocalIdentityProvider(ILogger log)
+        public LocalIdentityProvider(ILogger log, IDatabaseProvider db)
         {
             _log = log;
+            _db = db;
+            _log.Debug("Created with log type '{0}'", _log.GetType());
+            _log.Debug("Created with Database provider type '{0}'", _db.GetType());
         }
 
         //TODO: Move this module to a separate assembly?
