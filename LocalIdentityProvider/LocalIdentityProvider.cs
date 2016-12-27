@@ -15,6 +15,7 @@ using System;
 
 using Limitless.Runtime.Types;
 using Limitless.Runtime.Interfaces;
+using Limitless.LocalIdentityProvider.Models;
 
 namespace Limitless.LocalIdentityProvider
 {
@@ -121,6 +122,13 @@ namespace Limitless.LocalIdentityProvider
             {
                 throw new UnauthorizedAccessException("Username or password is incorrect");
             }
+
+            _log.Warning("LOGIN!");
+
+            //Users userModel = _db.QuerySingle<Users>(@"SELECT * FROM users WHERE id = @0", new object[] { 1 });
+            //Users userModel = _db.QuerySingle<Users>("SELECT * FROM users WHERE id = 1");
+            Users userModel = _db.QuerySingle<Users>(@"SELECT * FROM users WHERE id = @0", new object[] { 10 });
+
 
             BaseUser user = new BaseUser(username);
             user.Name = "Ass";

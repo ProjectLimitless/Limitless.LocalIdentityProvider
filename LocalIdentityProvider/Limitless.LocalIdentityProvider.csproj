@@ -48,6 +48,7 @@
     <Compile Include="LocalIdentityProvider.cs" />
     <Compile Include="LocalIdentityConfig.cs" />
     <Compile Include="LocalUser.cs" />
+    <Compile Include="Models\Users.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
