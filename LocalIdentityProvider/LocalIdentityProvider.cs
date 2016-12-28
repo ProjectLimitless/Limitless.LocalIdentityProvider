@@ -20,16 +20,7 @@ using Limitless.LocalIdentityProvider.Models;
 namespace Limitless.LocalIdentityProvider
 {
     /// <summary>
-    /// TODO: Move this
-    /// </summary>
-    public class JwtToken
-    {
-        public string sub;
-        public long exp;
-    }
-    
-    /// <summary>
-    /// Prov
+    /// Provides identity for local-only users.
     /// </summary>
     public class LocalIdentityProvider : IModule, IIdentityProvider
     {
@@ -45,6 +36,10 @@ namespace Limitless.LocalIdentityProvider
         /// The local configuration.
         /// </summary>
         private LocalIdentityConfig _config;
+        /// <summary>
+        /// JWT secret key.
+        /// </summary>
+        private byte[] _key;
 
         /// <summary>
         /// Standard constructor with log.
@@ -54,6 +49,8 @@ namespace Limitless.LocalIdentityProvider
         {
             _log = log;
             _db = db;
+            // TODO: Key needs to be from config
+            _key = new byte[] { 112, 163, 236, 130, 140, 212, 109, 228, 219, 63, 15, 4, 136, 43, 239, 186 };
             _log.Debug("Created with log type '{0}'", _log.GetType());
             _log.Debug("Created with Database provider type '{0}'", _db.GetType());
         }
@@ -88,25 +85,30 @@ namespace Limitless.LocalIdentityProvider
         /// </summary>
         public BaseUser ValidateToken(string token)
         {
-            LocalUser user = new LocalUser("usertest");
-            user.IDNumber = "MYIDNUMBERSSS";
             try
             {
-                var payload = Jose.JWT.Decode<JwtToken>(token, "mysecretkey");
+                var payload = Jose.JWT.Decode<LocalIdentityToken>(token, _key);
                 var tokenExpires = DateTime.FromBinary(payload.exp);
                 if (tokenExpires > DateTime.UtcNow)
                 {
-                    // CoreContainer.Instance.IdentityProvider.Handler?
-                    // TODO: This function must come from IIdentityProvider and return a wrappable user object
-                    return user;
+                    Users userModel = _db.QuerySingle<Users>(
+                        @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0",
+                        new object[] { payload.uid }
+                    );
+                    if (userModel != null)
+                    {
+                        BaseUser user = new BaseUser(userModel.Username, true);
+                        user.Name = userModel.FirstName;
+                        user.Surname = userModel.LastName;
+                        return user;
+                    }
                 }
             }
             catch (Exception)
             {
-                return user;
+                return null;
             }
-
-            return user;
+            return null;
         }
 
         /// <summary>
@@ -116,32 +118,35 @@ namespace Limitless.LocalIdentityProvider
         public BaseUser Login(string username, string password)
         {
             // TODO: Find a clean way to handle required parameters
-            if (username == string.Empty || username == null)
-            {
-                throw new MissingFieldException("Username must not be blank");
-            }
-            if (password == string.Empty || password == null)
-            {
-                throw new MissingFieldException("password must not be blank");
-            }
-            
+            // TODO: Check null returns - could be better
             Users userModel = _db.QuerySingle<Users>(
                 @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
                 new object[] { username }
             );
-            
             if (userModel == null)
             {
-                throw new UnauthorizedAccessException("Username or password is incorrect");
+                return null;
             }
             if (BCrypt.Net.BCrypt.Verify(password, userModel.Password) == false)
             {
-                throw new UnauthorizedAccessException("Username or password is incorrect");
+                return null;
             }
 
-            BaseUser user = new BaseUser(username);
+            // Generate access token
+            LocalIdentityToken payload = new LocalIdentityToken();
+            payload.aud = "limitless.local";
+            payload.exp = DateTime.Now.AddDays(1).Ticks;
+            payload.iss = "limitless.local";
+            payload.name = $"{userModel.FirstName} {userModel.LastName}";
+            payload.sub = "Local User";
+            payload.uid = userModel.ID;
+            // TODO: Change to GCM-based token
+            string token = Jose.JWT.Encode(payload, _key, Jose.JwsAlgorithm.HS512);
+            
+            BaseUser user = new BaseUser(username, true);
             user.Name = userModel.FirstName;
             user.Surname = userModel.LastName;
+            user.AccessToken = token;
             return user;
         }
     }

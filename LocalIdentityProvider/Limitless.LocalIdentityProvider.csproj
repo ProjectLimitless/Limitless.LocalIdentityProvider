@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="LocalIdentityToken.cs" />
     <Compile Include="LocalIdentityProvider.cs" />
     <Compile Include="LocalIdentityConfig.cs" />
     <Compile Include="LocalUser.cs" />
