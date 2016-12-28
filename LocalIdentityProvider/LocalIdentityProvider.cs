@@ -41,6 +41,10 @@ namespace Limitless.LocalIdentityProvider
         /// The database provider.
         /// </summary>
         private IDatabaseProvider _db;
+        /// <summary>
+        /// The local configuration.
+        /// </summary>
+        private LocalIdentityConfig _config;
 
         /// <summary>
         /// Standard constructor with log.
@@ -61,7 +65,12 @@ namespace Limitless.LocalIdentityProvider
         /// </summary>
         public void Configure(dynamic settings)
         {
-            // Nothing to do
+            if (settings == null)
+            {
+                throw new NullReferenceException("Settings can not be null");
+            }
+            LocalIdentityConfig config = (LocalIdentityConfig)settings;
+            _config = config;
         }
 
         /// <summary>
@@ -106,7 +115,6 @@ namespace Limitless.LocalIdentityProvider
         /// </summary>
         public BaseUser Login(string username, string password)
         {
-            // TODO: Continue here
             // TODO: Find a clean way to handle required parameters
             if (username == string.Empty || username == null)
             {
@@ -116,22 +124,24 @@ namespace Limitless.LocalIdentityProvider
             {
                 throw new MissingFieldException("password must not be blank");
             }
-
-            // Testing
-            if (password != "demopass")
+            
+            Users userModel = _db.QuerySingle<Users>(
+                @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
+                new object[] { username }
+            );
+            
+            if (userModel == null)
+            {
+                throw new UnauthorizedAccessException("Username or password is incorrect");
+            }
+            if (BCrypt.Net.BCrypt.Verify(password, userModel.Password) == false)
             {
                 throw new UnauthorizedAccessException("Username or password is incorrect");
             }
 
-            _log.Warning("LOGIN!");
-
-            //Users userModel = _db.QuerySingle<Users>(@"SELECT * FROM users WHERE id = @0", new object[] { 1 });
-            //Users userModel = _db.QuerySingle<Users>("SELECT * FROM users WHERE id = 1");
-            Users userModel = _db.QuerySingle<Users>(@"SELECT * FROM users WHERE id = @0", new object[] { 10 });
-
-
             BaseUser user = new BaseUser(username);
-            user.Name = "Ass";
+            user.Name = userModel.FirstName;
+            user.Surname = userModel.LastName;
             return user;
         }
     }

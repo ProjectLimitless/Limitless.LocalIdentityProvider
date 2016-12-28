@@ -20,5 +20,9 @@ namespace Limitless.LocalIdentityProvider
     /// </summary>
     public class LocalIdentityConfig
     {
+        /// <summary>
+        /// The cost (or work factor) of the bcrypt hash.
+        /// </summary>
+        public int BCryptCost { get; set; }
     }
 }
