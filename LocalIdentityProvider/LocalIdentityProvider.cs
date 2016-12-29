@@ -55,7 +55,6 @@ namespace Limitless.LocalIdentityProvider
             _log.Debug("Created with Database provider type '{0}'", _db.GetType());
         }
 
-        //TODO: Move this module to a separate assembly?
         /// <summary>
         /// Implemented from interface 
         /// <see cref="Limitless.Runtime.Interface.IModule.Configure"/>
@@ -117,7 +116,6 @@ namespace Limitless.LocalIdentityProvider
         /// </summary>
         public BaseUser Login(string username, string password)
         {
-            // TODO: Find a clean way to handle required parameters
             // TODO: Check null returns - could be better
             Users userModel = _db.QuerySingle<Users>(
                 @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
@@ -135,7 +133,7 @@ namespace Limitless.LocalIdentityProvider
             // Generate access token
             LocalIdentityToken payload = new LocalIdentityToken();
             payload.aud = "limitless.local";
-            payload.exp = DateTime.Now.AddDays(1).Ticks;
+            payload.exp = DateTime.Now.AddDays(1).ToBinary();
             payload.iss = "limitless.local";
             payload.name = $"{userModel.FirstName} {userModel.LastName}";
             payload.sub = "Local User";
