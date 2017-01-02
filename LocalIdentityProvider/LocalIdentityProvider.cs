@@ -82,7 +82,7 @@ namespace Limitless.LocalIdentityProvider
         /// Implemented from interface 
         /// <see cref="Limitless.Runtime.Interface.IIdentityProvider.ValidateToken"/>
         /// </summary>
-        public BaseUser ValidateToken(string token)
+        public LoginResult TokenLogin(string token)
         {
             try
             {
@@ -99,35 +99,35 @@ namespace Limitless.LocalIdentityProvider
                         BaseUser user = new BaseUser(userModel.Username, true);
                         user.Name = userModel.FirstName;
                         user.Surname = userModel.LastName;
-                        return user;
+                        return new LoginResult(user);
                     }
                 }
+                return new LoginResult(false, "Your token has expired");
             }
             catch (Exception)
             {
-                return null;
+                // Nothing here
             }
-            return null;
+            return new LoginResult(false, "A valid access token is required");
         }
 
         /// <summary>
         /// Implemented from interface 
         /// <see cref="Limitless.Runtime.Interface.IIdentityProvider.Login"/>
         /// </summary>
-        public BaseUser Login(string username, string password)
+        public LoginResult Login(string username, string password)
         {
-            // TODO: Check null returns - could be better
             Users userModel = _db.QuerySingle<Users>(
                 @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
                 new object[] { username }
             );
             if (userModel == null)
             {
-                return null;
+                return new LoginResult(false);
             }
             if (BCrypt.Net.BCrypt.Verify(password, userModel.Password) == false)
             {
-                return null;
+                return new LoginResult(false);
             }
 
             // Generate access token
@@ -145,7 +145,7 @@ namespace Limitless.LocalIdentityProvider
             user.Name = userModel.FirstName;
             user.Surname = userModel.LastName;
             user.AccessToken = token;
-            return user;
+            return new LoginResult(user);
         }
     }
 }
