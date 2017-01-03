@@ -12,6 +12,7 @@
 */
 
 using System;
+using System.Reflection;
 
 using Limitless.Runtime.Types;
 using Limitless.Runtime.Interfaces;
@@ -76,6 +77,61 @@ namespace Limitless.LocalIdentityProvider
         public Type GetConfigurationType()
         {
             return typeof(LocalIdentityConfig);
+        }
+
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interface.IModule.GetTitle"/>
+        /// </summary>
+        public string GetTitle()
+        {
+            var assembly = typeof(LocalIdentityProvider).Assembly;
+            var attribute = assembly.GetCustomAttribute<AssemblyTitleAttribute>();
+            if (attribute != null)
+            {
+                return attribute.Title;
+            }
+            return "Unknown";
+        }
+
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interface.IModule.GetAuthor"/>
+        /// </summary>
+        public string GetAuthor()
+        {
+            var assembly = typeof(LocalIdentityProvider).Assembly;
+            var attribute = assembly.GetCustomAttribute<AssemblyCompanyAttribute>();
+            if (attribute != null)
+            {
+                return attribute.Company;
+            }
+            return "Unknown";
+        }
+
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interface.IModule.GetVersion"/>
+        /// </summary>
+        public string GetVersion()
+        {
+            var assembly = typeof(LocalIdentityProvider).Assembly;
+            return assembly.GetName().Version.ToString();
+        }
+
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interface.IModule.GetDescription"/>
+        /// </summary>
+        public string GetDescription()
+        {
+            var assembly = typeof(LocalIdentityProvider).Assembly;
+            var attribute = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>();
+            if (attribute != null)
+            {
+                return attribute.Description;
+            }
+            return "Unknown";
         }
 
         /// <summary>
