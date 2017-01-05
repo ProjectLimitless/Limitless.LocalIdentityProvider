@@ -12,7 +12,9 @@
 */
 
 using System;
+using System.Linq;
 using System.Reflection;
+using System.Collections.Generic;
 
 using Limitless.Runtime.Types;
 using Limitless.Runtime.Interfaces;
@@ -66,7 +68,7 @@ namespace Limitless.LocalIdentityProvider
             {
                 throw new NullReferenceException("Settings can not be null");
             }
-            LocalIdentityConfig config = (LocalIdentityConfig)settings;
+            var config = (LocalIdentityConfig)settings;
             _config = config;
         }
 
@@ -146,7 +148,7 @@ namespace Limitless.LocalIdentityProvider
                 var tokenExpires = DateTime.FromBinary(payload.exp);
                 if (tokenExpires > DateTime.UtcNow)
                 {
-                    Users userModel = _db.QuerySingle<Users>(
+                    var userModel = _db.QuerySingle<Users>(
                         @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0",
                         new object[] { payload.uid }
                     );
@@ -173,7 +175,7 @@ namespace Limitless.LocalIdentityProvider
         /// </summary>
         public LoginResult Login(string username, string password)
         {
-            Users userModel = _db.QuerySingle<Users>(
+            var userModel = _db.QuerySingle<Users>(
                 @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
                 new object[] { username }
             );
@@ -187,7 +189,7 @@ namespace Limitless.LocalIdentityProvider
             }
 
             // Generate access token
-            LocalIdentityToken payload = new LocalIdentityToken();
+            var payload = new LocalIdentityToken();
             payload.aud = "limitless.local";
             payload.exp = DateTime.Now.AddDays(1).ToBinary();
             payload.iss = "limitless.local";
@@ -197,11 +199,55 @@ namespace Limitless.LocalIdentityProvider
             // TODO: Change to GCM-based token
             string token = Jose.JWT.Encode(payload, _key, Jose.JwsAlgorithm.HS512);
             
-            BaseUser user = new BaseUser(username, true);
+            var user = new BaseUser(username, true);
             user.Name = userModel.FirstName;
             user.Surname = userModel.LastName;
             user.AccessToken = token;
             return new LoginResult(user);
+        }
+        
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interfaces.IIdentityProvider.List"/>
+        /// </summary>
+        public List<dynamic> List()
+        {
+            var users = _db.QueryMany<Users>(
+                @"SELECT * FROM users WHERE isDeleted = 0"
+            );
+            if (users == null)
+            {
+                return new List<dynamic>();
+            }
+            List<dynamic> output = new List<dynamic>();
+            foreach (Users user in users)
+            {
+                dynamic userData = user;
+                userData.Password = "";
+                output.Add(userData);
+            }
+            return output;
+        }
+
+        /// <summary>
+        /// Implemented from interface 
+        /// <see cref="Limitless.Runtime.Interfaces.IIdentityProvider.View(dynamic)"/>
+        /// </summary>
+        public APIResponse View(dynamic id)
+        {
+            var response = new APIResponse();
+            var user = _db.QuerySingle<Users>(
+                @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0",
+                new object[] { id }
+            );
+            if (user == null)
+            {
+                response.StatusCode = 404;
+                response.StatusMessage = "The user could not be found";
+                return response;
+            }
+            response.Data = user;
+            return response;
         }
     }
 }
