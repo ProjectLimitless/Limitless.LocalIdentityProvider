@@ -219,7 +219,7 @@ namespace Limitless.LocalIdentityProvider
             {
                 return new List<dynamic>();
             }
-            List<dynamic> output = new List<dynamic>();
+            var output = new List<dynamic>();
             foreach (Users user in users)
             {
                 dynamic userData = user;
