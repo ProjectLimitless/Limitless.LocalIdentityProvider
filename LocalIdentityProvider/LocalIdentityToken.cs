@@ -16,7 +16,7 @@ using System;
 namespace Limitless.LocalIdentityProvider
 {
     /// <summary>
-    /// The local identity JWT token.
+    /// The JWT token structure.
     /// </summary>
     public class LocalIdentityToken
     {

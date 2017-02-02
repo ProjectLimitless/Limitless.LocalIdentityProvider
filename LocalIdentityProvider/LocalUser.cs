@@ -23,7 +23,7 @@ namespace Limitless.LocalIdentityProvider
     public class LocalUser : BaseUser
     {
         /// <summary>
-        /// TODO: Testing
+        /// TODO: For Testing only!
         /// </summary>
         public string IDNumber { get; set; }
 

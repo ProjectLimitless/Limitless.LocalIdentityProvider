@@ -12,7 +12,6 @@
 */
 
 using System;
-using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
 
@@ -30,24 +29,26 @@ namespace Limitless.LocalIdentityProvider
         /// <summary>
         /// The logger.
         /// </summary>
-        private ILogger _log;
+        private readonly ILogger _log;
         /// <summary>
         /// The database provider.
         /// </summary>
-        private IDatabaseProvider _db;
+        private readonly IDatabaseProvider _db;
+        /// <summary>
+        /// JWT secret key.
+        /// </summary>
+        private readonly byte[] _key;
         /// <summary>
         /// The local configuration.
         /// </summary>
         private LocalIdentityConfig _config;
-        /// <summary>
-        /// JWT secret key.
-        /// </summary>
-        private byte[] _key;
 
         /// <summary>
-        /// Standard constructor with log.
+        /// Creates a new instance of the identity provider using 
+        /// the supplied <see cref="ILogger"/>.
         /// </summary>
-        /// <param name="log">The logger to use</param>
+        /// <param name="log">The <see cref="ILogger"/> to use</param>
+        /// <param name="db">The <see cref="IDatabaseProvider"/> to use</param>
         public LocalIdentityProvider(ILogger log, IDatabaseProvider db)
         {
             _log = log;
@@ -60,7 +61,7 @@ namespace Limitless.LocalIdentityProvider
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.Configure"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.Configure"/>
         /// </summary>
         public void Configure(dynamic settings)
         {
@@ -74,7 +75,7 @@ namespace Limitless.LocalIdentityProvider
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.GetConfigurationType"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.GetConfigurationType"/>
         /// </summary>
         public Type GetConfigurationType()
         {
@@ -83,37 +84,29 @@ namespace Limitless.LocalIdentityProvider
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.GetTitle"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.GetTitle"/>
         /// </summary>
         public string GetTitle()
         {
             var assembly = typeof(LocalIdentityProvider).Assembly;
             var attribute = assembly.GetCustomAttribute<AssemblyTitleAttribute>();
-            if (attribute != null)
-            {
-                return attribute.Title;
-            }
-            return "Unknown";
+            return attribute != null ? attribute.Title : "Unknown";
         }
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.GetAuthor"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.GetAuthor"/>
         /// </summary>
         public string GetAuthor()
         {
             var assembly = typeof(LocalIdentityProvider).Assembly;
             var attribute = assembly.GetCustomAttribute<AssemblyCompanyAttribute>();
-            if (attribute != null)
-            {
-                return attribute.Company;
-            }
-            return "Unknown";
+            return attribute != null ? attribute.Company : "Unknown";
         }
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.GetVersion"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.GetVersion"/>
         /// </summary>
         public string GetVersion()
         {
@@ -123,22 +116,18 @@ namespace Limitless.LocalIdentityProvider
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IModule.GetDescription"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IModule.GetDescription"/>
         /// </summary>
         public string GetDescription()
         {
             var assembly = typeof(LocalIdentityProvider).Assembly;
             var attribute = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>();
-            if (attribute != null)
-            {
-                return attribute.Description;
-            }
-            return "Unknown";
+            return attribute != null ? attribute.Description : "Unknown";
         }
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IIdentityProvider.ValidateToken"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IIdentityProvider.TokenLogin"/>
         /// </summary>
         public LoginResult TokenLogin(string token)
         {
@@ -149,14 +138,15 @@ namespace Limitless.LocalIdentityProvider
                 if (tokenExpires > DateTime.UtcNow)
                 {
                     var userModel = _db.QuerySingle<Users>(
-                        @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0",
-                        new object[] { payload.uid }
+                        @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0", payload.uid
                     );
                     if (userModel != null)
                     {
-                        BaseUser user = new BaseUser(userModel.Username, true);
-                        user.Name = userModel.FirstName;
-                        user.Surname = userModel.LastName;
+                        var user = new BaseUser(userModel.Username, true)
+                        {
+                            Name = userModel.FirstName,
+                            Surname = userModel.LastName
+                        };
                         return new LoginResult(user);
                     }
                 }
@@ -171,13 +161,14 @@ namespace Limitless.LocalIdentityProvider
 
         /// <summary>
         /// Implemented from interface 
-        /// <see cref="Limitless.Runtime.Interface.IIdentityProvider.Login"/>
+        /// <see cref="Limitless.Runtime.Interfaces.IIdentityProvider.Login"/>
         /// </summary>
+        /// <param name="username">The username to log in with</param>
+        /// <param name="password"></param>
         public LoginResult Login(string username, string password)
         {
             var userModel = _db.QuerySingle<Users>(
-                @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", 
-                new object[] { username }
+                @"SELECT * FROM users WHERE username = @0 AND isDeleted = 0", username
             );
             if (userModel == null)
             {
@@ -189,23 +180,27 @@ namespace Limitless.LocalIdentityProvider
             }
 
             // Generate access token
-            var payload = new LocalIdentityToken();
-            payload.aud = "limitless.local";
-            payload.exp = DateTime.Now.AddDays(1).ToBinary();
-            payload.iss = "limitless.local";
-            payload.name = $"{userModel.FirstName} {userModel.LastName}";
-            payload.sub = "Local User";
-            payload.uid = userModel.ID;
+            var payload = new LocalIdentityToken
+            {
+                aud = "limitless.local",
+                exp = DateTime.Now.AddDays(1).ToBinary(),
+                iss = "limitless.local",
+                name = $"{userModel.FirstName} {userModel.LastName}",
+                sub = "Local User",
+                uid = userModel.ID
+            };
             // TODO: Change to GCM-based token
             string token = Jose.JWT.Encode(payload, _key, Jose.JwsAlgorithm.HS512);
-            
-            var user = new BaseUser(username, true);
-            user.Name = userModel.FirstName;
-            user.Surname = userModel.LastName;
-            user.AccessToken = token;
+
+            var user = new BaseUser(username, true)
+            {
+                Name = userModel.FirstName,
+                Surname = userModel.LastName,
+                AccessToken = token
+            };
             return new LoginResult(user);
         }
-        
+
         /// <summary>
         /// Implemented from interface 
         /// <see cref="Limitless.Runtime.Interfaces.IIdentityProvider.List"/>
@@ -237,8 +232,7 @@ namespace Limitless.LocalIdentityProvider
         {
             var response = new APIResponse();
             var user = _db.QuerySingle<Users>(
-                @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0",
-                new object[] { id }
+                @"SELECT * FROM users WHERE id = @0 AND isDeleted = 0", id
             );
             if (user == null)
             {
