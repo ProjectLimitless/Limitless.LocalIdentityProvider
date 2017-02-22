@@ -35,8 +35,8 @@
       <HintPath>..\..\ProjectLimitless\packages\BCrypt-Official.0.1.109\lib\BCrypt.Net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="jose-jwt, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\ProjectLimitless\packages\jose-jwt.2.1.0\lib\net40\jose-jwt.dll</HintPath>
+    <Reference Include="jose-jwt, Version=2.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\ProjectLimitless\packages\jose-jwt.2.2.0\lib\net461\jose-jwt.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
